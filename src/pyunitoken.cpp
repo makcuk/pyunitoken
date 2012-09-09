@@ -652,35 +652,24 @@ static PyObject *
 FsWriteFile(PyObject *self, PyObject *args, PyObject *keywds) {
     UT_HANDLE handle = 0;
     unsigned char *write_buffer = NULL;
-    unsigned char wr_buf[200] = "hello medved";
     unsigned long length = 0;
     unsigned long offset = 0;
     UT_RV   Result = 0;
     static char *kwlist[] = {(char *)"offset"};
-    char fname[16] = "test1.bin";
     void *reserve;
 
     if (!PyArg_ParseTupleAndKeywords(args, keywds, "lz#|l", kwlist, &handle, &write_buffer,
         &length, &offset))
         return NULL;
 
-    printf("buffer: %s\t len: %lu\t offset: %lu\n", write_buffer, length, offset);
     if (handle > 0) {
-        unsigned char filePermission = 0x0;
-        Result = UT_FS_CreateFile((UT_HANDLE) handle, fname, 200, filePermission);
-        Result = UT_FS_GetFilePermission(handle, fname, &filePermission);
-        unsigned long uFileSize = 0;
-        Result = UT_FS_GetFileSize(handle, fname, &uFileSize );
-        printf("%lu\t%lu\n", filePermission, uFileSize); 
-        Result = UT_FS_OpenFile((UT_HANDLE) handle, fname, NULL);
         Result =  UT_FS_WriteFile(
             (UT_HANDLE) handle, 
-            0,
-            200, 
-            (unsigned char *)&wr_buf,
+            offset,
+            length, 
+            (unsigned char *)write_buffer,
             reserve // lpReserve
             );
-        printf("ret: %lu\n", Result);
         UT_FS_CloseFile(handle, &reserve);
         if (Result == UT_FS_NO_FILE) {
             PyErr_SetString(PyUniTokenNoFileError, err2msg(Result));
@@ -700,23 +689,26 @@ FsWriteFile(PyObject *self, PyObject *args, PyObject *keywds) {
 }
 
 static PyObject *
-FsReadFile(PyObject *self, PyObject *args) {
+FsReadFile(PyObject *self, PyObject *args, PyObject *keywds) {
     UT_HANDLE handle = 0;
-    unsigned char read_buffer[200];// = NULL;
+    unsigned char *read_buffer = NULL;
     unsigned long length = 0;
     unsigned long offset = 0;
     UT_RV   Result = 0;
     static char *kwlist[] = {(char *)"offset"};
 
-    if (!PyArg_ParseTuple(args, "l", &handle))
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "ll|l", kwlist, &handle, &length, &offset))
         return NULL;
  
+    read_buffer = (unsigned char *) malloc(length+1);
+    bzero(read_buffer, length+1); 
+
     if (handle > 0) {
-        Result =  UT_FS_WriteFile(
+        Result =  UT_FS_ReadFile(
             (UT_HANDLE) handle, 
-            0,
-            100, 
-            (unsigned char *)&read_buffer,
+            offset,
+            length, 
+            read_buffer,
             NULL // lpReserve
             );
         if (Result == UT_FS_NO_FILE) {

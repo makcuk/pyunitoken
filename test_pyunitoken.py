@@ -1,8 +1,8 @@
-import unittest
+import unittest2
 from pyunitoken import *
 import random
 
-class PyUniTokenTest(unittest.TestCase):
+class PyUniTokenTest(unittest2.TestCase):
 
     def setUp(self):
         self.handle = InitToken()
@@ -23,9 +23,8 @@ class PyUniTokenTest(unittest.TestCase):
 
     def test_permissions(self):
 
-        with self.assertRaises(IOError) as cont:
+        with self.assertRaisesRegexp(IOError, 'Password error'):
             TokenLogin(self.handle, UT_USER_LEVEL_ADMIN, 'badpass')
-        self.assertEqual(cont.exception.args, ("Password error",))
         TokenLogin(self.handle, UT_USER_LEVEL_ADMIN, 'admin')
         self.assertEqual(GetUserLevel(self.handle), 'admin')
 
@@ -62,27 +61,23 @@ class PyUniTokenTest(unittest.TestCase):
 
     def test_filesystem(self):
         TokenLogin(self.handle, UT_USER_LEVEL_ADMIN, 'admin')
-#        self.assertEqual((0, 65536), FsGetSpace(self.handle))
-#        self.assertEqual(0, FsGetFileCount(self.handle))
-#        with self.assertRaises(UniTokenNoFileError):
-#            FsGetFirstFileName(self.handle)
-#        with self.assertRaises(UniTokenNoFileError):
-#            FsGetNextFileName(self.handle)
-#        self.assertEqual(0, FsCreateFile(self.handle, 'test1.bin', 64, FILE_PERMISSION_USER))
-#        self.assertEqual(0, FsOpenFile(self.handle, 'test1.bin'))
+        self.assertEqual((0, 65536), FsGetSpace(self.handle))
+        self.assertEqual(0, FsGetFileCount(self.handle))
+        with self.assertRaises(UniTokenNoFileError):
+            FsGetFirstFileName(self.handle)
+        with self.assertRaises(UniTokenNoFileError):
+            FsGetNextFileName(self.handle)
+        self.assertEqual(0, FsCreateFile(self.handle, 'test1.bin', 64, FILE_PERMISSION_USER))
+        self.assertEqual(0, FsOpenFile(self.handle, 'test1.bin'))
         buf = "".join([chr(x) for x in xrange(32, 64+32)])
         FsWriteFile(self.handle, buf)
+        self.assertEqual(0, FsOpenFile(self.handle, 'test1.bin'))
+        self.assertEqual(buf, FsReadFile(self.handle, 64))
         self.assertEqual(0, FsDeleteFile(self.handle, 'test1.bin'))
-    def test_fs2(self):
-
-        TokenLogin(self.handle, UT_USER_LEVEL_ADMIN, 'admin')
-        print "-%lu-  -%s-" % (FsGetFileCount(self.handle),  FsGetFirstFileName(self.handle))
-        FsOpenFile(self.handle, '.Container')
-        print FsReadFile(self.handle)
 
     def tearDown(self):
         TokenLogout(self.handle)
         CloseToken(self.handle)
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest2.main()
