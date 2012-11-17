@@ -1,4 +1,5 @@
 #include <Python.h>
+#include <string.h>
 #include <UniToken.h>
 #include "pyunitoken.h"
 
@@ -120,10 +121,53 @@ GetFirmwareVersion(PyObject *self, PyObject *args) {
 
 static PyObject *
 TokenLogin(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned long level = 0;
+    unsigned char *pin;
+    UT_RV   Result = 0;
+
+
+    if (!PyArg_ParseTuple(args, "lls", &handle, &level, &pin))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_Logon((UT_HANDLE) handle, level, pin);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+        }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+    Py_INCREF(Py_None);
+    return Py_None;
+
 }
 
 static PyObject *
 TokenLogout(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    UT_RV   Result;
+
+    if (!PyArg_ParseTuple(args, "l", &handle))
+        return NULL;
+
+    if (handle > 0) { 
+        Result = UT_Logoff((UT_HANDLE) handle);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_RuntimeError, err2msg(Result));
+             return NULL;
+        }
+        }
+    else {
+        PyErr_SetString(PyExc_RuntimeError, (char *) "Handle empty");
+        return NULL;
+    };
+    Py_INCREF(Py_None);
+    return Py_None;
+
 }
 
 static PyObject *
@@ -148,7 +192,6 @@ GetUserLevel(PyObject *self, PyObject *args) {
         return NULL;
     };
    
-    printf("level %lu\n", level);
     switch(level) {
         case UT_USER_LEVEL_GUEST:
                 {level_name = (char *)"guest";break;}
@@ -163,12 +206,52 @@ GetUserLevel(PyObject *self, PyObject *args) {
 
 }
 
+static PyObject *
+ChangePin(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned long level = 0;
+    unsigned char *pin;
+    unsigned char *newpin;
+    UT_RV   Result = 0;
+
+
+    if (!PyArg_ParseTuple(args, "llss", &handle, &level, &pin, &newpin))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_ChangePin((UT_HANDLE) handle, level, UT_CHANGE_PIN_MODE_BYSELF, newpin, pin);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+        }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+    Py_INCREF(Py_None);
+    return Py_None;
+
+}
+
+static PyObject *
+FormatToken(PyObject *self, PyObject *args) {
+}
+
+static PyObject *
+GetSoftId(PyObject *self, PyObject *args) {
+}
+
 static PyMethodDef PyUniTokenMethods[] = {
 {"InitToken",  InitToken, METH_VARARGS, "Init token"},
 {"GetLibraryVersion",  GetLibraryVersion, METH_VARARGS, "Return library version"},
 {"CloseToken", CloseToken, METH_VARARGS, "Close token handle"},
 {"GetFirmwareVersion", GetFirmwareVersion, METH_VARARGS, "Get token firmware version"},
 {"GetUserLevel", GetUserLevel, METH_VARARGS, "Get current token user level"},
+{"TokenLogin", TokenLogin, METH_VARARGS, "Login into token, possible usernames 'user' or 'admin'"},
+{"TokenLogout", TokenLogout, METH_VARARGS, "Logout from token (back to guest)'"},
+{"ChangePin", ChangePin, METH_VARARGS, "Change pin for selected user"},
+
 {NULL, NULL,  0, NULL}        /* Sentinel */
 };
 
