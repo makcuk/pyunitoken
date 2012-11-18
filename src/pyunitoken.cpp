@@ -219,7 +219,7 @@ ChangePin(PyObject *self, PyObject *args) {
         return NULL;
 
     if (handle > 0) { 
-        Result =  UT_ChangePin((UT_HANDLE) handle, level, UT_CHANGE_PIN_MODE_BYSELF, newpin, pin);
+        Result =  UT_ChangePin((UT_HANDLE) handle, level, UT_CHANGE_PIN_MODE_BYSELF, pin, newpin);
         if (Result != UT_OK) {
              PyErr_SetString(PyExc_IOError, err2msg(Result));
              return NULL;
@@ -236,10 +236,176 @@ ChangePin(PyObject *self, PyObject *args) {
 
 static PyObject *
 FormatToken(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    UT_RV   Result = 0;
+
+
+    if (!PyArg_ParseTuple(args, "l", &handle))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_Format((UT_HANDLE) handle);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+        }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+    Py_INCREF(Py_None);
+    return Py_None;
+
 }
 
 static PyObject *
 GetSoftId(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned long softid = 0;
+    UT_RV   Result = 0;
+
+
+    if (!PyArg_ParseTuple(args, "l", &handle))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_GetSoftID((UT_HANDLE) handle, &softid);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+        }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("l", softid);
+}
+
+static PyObject *
+SetSoftId(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned long softid = 0;
+    UT_RV   Result = 0;
+
+
+    if (!PyArg_ParseTuple(args, "ll", &handle, &softid))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_SetSoftID((UT_HANDLE) handle, softid);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+        }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+static PyObject *
+RSAGenKeyPair(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned long modulus = 0;
+    unsigned long pubexp = 0;
+    KEY_HANDLE_PTR pubkeyhandle;
+    KEY_HANDLE_PTR prikeyhandle;
+    UT_RV   Result = 0;
+    PyObject *rslt = PyTuple_New(2);
+
+    if (!PyArg_ParseTuple(args, "lll", &handle, &modulus, &pubexp))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_RSAGenerateKeyPair(
+            (UT_HANDLE) handle, 
+            modulus,
+            pubexp, 
+            (KEY_HANDLE_PTR) &pubkeyhandle, 
+            (KEY_HANDLE_PTR) &prikeyhandle);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    PyTuple_SetItem(rslt, 0, Py_BuildValue("l", pubkeyhandle));
+    PyTuple_SetItem(rslt, 1, Py_BuildValue("l", prikeyhandle));
+    return rslt;
+}
+
+static PyObject *
+RSAGetKeyPairCount(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned long keycount = 0;
+    UT_RV   Result = 0;
+
+    if (!PyArg_ParseTuple(args, "l", &handle))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_RSAGetKeyPairCount(
+            (UT_HANDLE) handle, 
+            &keycount);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+    
+    return Py_BuildValue("l", keycount);
+}
+
+static PyObject *
+RSAPubKeyEncrypt(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned char *data = NULL;
+    unsigned long datalen = 0;
+    unsigned char encdata[512];
+    unsigned long encdatalen = 0;
+    UT_HANDLE pubkeyhandle;
+    UT_RV   Result = 0;
+
+    if (!PyArg_ParseTuple(args, "llz#", &handle, &pubkeyhandle, &data, &datalen))
+        return NULL;
+   
+    if(datalen != RSA_DATA_LEN_1024_BIT && datalen != RSA_DATA_LEN_2048_BIT) {
+        PyErr_SetString(PyExc_IOError, (char *) "Data length should be 1024 or 2048 bits");
+        return NULL;
+        };
+    if (handle > 0) { 
+        Result =  UT_RSAPubKeyEncrypt(
+            (UT_HANDLE) handle, 
+            pubkeyhandle,
+            data, 
+            datalen, 
+            encdata,
+            &encdatalen);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("s", &encdata);
 }
 
 static PyMethodDef PyUniTokenMethods[] = {
@@ -251,7 +417,13 @@ static PyMethodDef PyUniTokenMethods[] = {
 {"TokenLogin", TokenLogin, METH_VARARGS, "Login into token, possible usernames 'user' or 'admin'"},
 {"TokenLogout", TokenLogout, METH_VARARGS, "Logout from token (back to guest)'"},
 {"ChangePin", ChangePin, METH_VARARGS, "Change pin for selected user"},
-
+{"GetSoftId", GetSoftId, METH_VARARGS, "Get token software id"},
+{"SetSoftId", SetSoftId, METH_VARARGS, "Set token software id"},
+{"FormatToken", FormatToken, METH_VARARGS, "Format token and clear all it content"},
+/* RSA */
+{"RSAGenKeyPair", RSAGenKeyPair, METH_VARARGS, "Generate new RSA keypair on token"},
+{"RSAGetKeyPairCount", RSAGetKeyPairCount, METH_VARARGS, "Get RSA key count"},
+{"RSAPubKeyEncrypt", RSAPubKeyEncrypt, METH_VARARGS, "Encrypt data with public key"},
 {NULL, NULL,  0, NULL}        /* Sentinel */
 };
 
@@ -259,6 +431,8 @@ PyMODINIT_FUNC
 initpyunitoken(void)
 {
     PyObject *m;
+    PyObject *v;
+    unsigned int i = 0;
 
     m = Py_InitModule("pyunitoken", PyUniTokenMethods);
     if (m == NULL) 
@@ -266,4 +440,10 @@ initpyunitoken(void)
     PyUniTokenError = PyErr_NewException((char *)"unitoken.UniTokenError", NULL, NULL);
     Py_INCREF(PyUniTokenError);
     PyModule_AddObject(m, "UniTokenError", PyUniTokenError);
+    while (constants[i].name != NULL) {
+        v = PyLong_FromLong(constants[i].value); 
+        PyObject_SetAttrString(m, constants[i].name, v);
+        Py_DECREF(v);
+        i++;
+    };
 }
