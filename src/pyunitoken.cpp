@@ -377,14 +377,19 @@ RSAPubKeyEncrypt(PyObject *self, PyObject *args) {
     unsigned long datalen = 0;
     unsigned char encdata[512];
     unsigned long encdatalen = 0;
+    unsigned long keymodulus = 0;
+    char errmsg[128];
     UT_HANDLE pubkeyhandle;
     UT_RV   Result = 0;
 
     if (!PyArg_ParseTuple(args, "llz#", &handle, &pubkeyhandle, &data, &datalen))
         return NULL;
    
-    if(datalen != RSA_DATA_LEN_1024_BIT && datalen != RSA_DATA_LEN_2048_BIT) {
-        PyErr_SetString(PyExc_IOError, (char *) "Data length should be 1024 or 2048 bits");
+    UT_RSAGetKeyPairModulus(handle, pubkeyhandle, &keymodulus);
+
+    if(datalen != keymodulus) {
+        snprintf((char *) &errmsg, 128, "Data length is %lu, key modulus is %lu, they should match", datalen*8, keymodulus*8);
+        PyErr_SetString(PyExc_IOError, (char *) &errmsg); 
         return NULL;
         };
     if (handle > 0) { 
@@ -404,8 +409,51 @@ RSAPubKeyEncrypt(PyObject *self, PyObject *args) {
         PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
         return NULL;
     };
+    
+    return Py_BuildValue("s#", &encdata, encdatalen);
+}
 
-    return Py_BuildValue("s", &encdata);
+static PyObject *
+RSAPriKeyDecrypt(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned char *encdata = NULL;
+    unsigned long encdatalen = 0;
+    unsigned char data[512];
+    unsigned long datalen = 0;
+    unsigned long keymodulus = 0;
+    char errmsg[128];
+    UT_HANDLE prikeyhandle;
+    UT_RV   Result = 0;
+
+    if (!PyArg_ParseTuple(args, "llz#", &handle, &prikeyhandle, &encdata, &encdatalen))
+        return NULL;
+  
+    UT_RSAGetKeyPairModulus(handle, prikeyhandle, &keymodulus);
+    
+    if(encdatalen != keymodulus) {
+        snprintf((char *) &errmsg, 128, "Data length is %lu, key modulus is %lu, they should match", encdatalen*8, keymodulus*8);
+        PyErr_SetString(PyExc_IOError, (char *) &errmsg); 
+        return NULL;
+        };
+    if (handle > 0) { 
+        Result =  UT_RSAPriKeyDecrypt(
+            (UT_HANDLE) handle, 
+            prikeyhandle,
+            encdata, 
+            encdatalen, 
+            data,
+            &datalen);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("s#", &data, datalen);
 }
 
 static PyMethodDef PyUniTokenMethods[] = {
@@ -424,6 +472,7 @@ static PyMethodDef PyUniTokenMethods[] = {
 {"RSAGenKeyPair", RSAGenKeyPair, METH_VARARGS, "Generate new RSA keypair on token"},
 {"RSAGetKeyPairCount", RSAGetKeyPairCount, METH_VARARGS, "Get RSA key count"},
 {"RSAPubKeyEncrypt", RSAPubKeyEncrypt, METH_VARARGS, "Encrypt data with public key"},
+{"RSAPriKeyDecrypt", RSAPriKeyDecrypt, METH_VARARGS, "Decrypt data with private key"},
 {NULL, NULL,  0, NULL}        /* Sentinel */
 };
 
