@@ -54,8 +54,8 @@ class PyUniTokenTest(unittest.TestCase):
         FormatToken(self.handle)
 
     def tearDown(self):
-        self.assertRaises(IOError, TokenLogout(self.handle))
-        self.assertRaises(IOError, CloseToken(self.handle))
+        TokenLogout(self.handle)
+        CloseToken(self.handle)
 
 if __name__ == "__main__":
     unittest.main()
