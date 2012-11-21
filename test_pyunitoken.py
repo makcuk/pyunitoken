@@ -53,6 +53,16 @@ class PyUniTokenTest(unittest.TestCase):
         TokenLogin(self.handle, UT_USER_LEVEL_ADMIN, 'admin')
         FormatToken(self.handle)
 
+    def test_filesystem(self):
+        TokenLogin(self.handle, UT_USER_LEVEL_ADMIN, 'admin')
+        self.assertEqual((0, 65536), FsGetSpace(self.handle))
+        self.assertEqual(0, FsGetFileCount(self.handle))
+        with self.assertRaisesRegexp(IOError, 'No file.*'):
+            FsGetFirstFileName(self.handle)
+        with self.assertRaisesRegexp(IOError, 'No file.*'):
+            FsGetNextFileName(self.handle)
+        self.assertEqual(0, FsCreateFile(self.handle, 'test1.bin', 256, FILE_PERMISSION_ADMIN))
+
     def tearDown(self):
         TokenLogout(self.handle)
         CloseToken(self.handle)

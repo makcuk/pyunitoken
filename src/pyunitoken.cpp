@@ -456,6 +456,156 @@ RSAPriKeyDecrypt(PyObject *self, PyObject *args) {
     return Py_BuildValue("s#", &data, datalen);
 }
 
+static PyObject *
+FsGetSpace(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned long used = 0;
+    unsigned long free = 0;
+    UT_RV   Result = 0;
+    PyObject *rslt = PyTuple_New(2);
+
+    if (!PyArg_ParseTuple(args, "l", &handle))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_FS_GetSpace(
+            (UT_HANDLE) handle, 
+            &used,
+            &free 
+            );
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    PyTuple_SetItem(rslt, 0, Py_BuildValue("l", used));
+    PyTuple_SetItem(rslt, 1, Py_BuildValue("l", free));
+    return rslt;
+}
+
+static PyObject *
+FsGetFileCount(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned long filecount = 0;
+    UT_RV   Result = 0;
+
+    if (!PyArg_ParseTuple(args, "l", &handle))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_FS_GetFileCount(
+            (UT_HANDLE) handle, 
+            &filecount
+            );
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("l", filecount);
+}
+
+static PyObject *
+FsGetFirstFileName(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    char    filename[17];
+    UT_RV   Result = 0;
+
+    if (!PyArg_ParseTuple(args, "l", &handle))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_FS_GetFirstFileName
+        (
+            (UT_HANDLE) handle, 
+            (char *)&filename
+            );
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("s", &filename);
+}
+
+static PyObject *
+FsGetNextFileName(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    char    filename[17];
+    UT_RV   Result = 0;
+
+    if (!PyArg_ParseTuple(args, "l", &handle))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_FS_GetNextFileName
+        (
+            (UT_HANDLE) handle, 
+            (char *)&filename
+            );
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("s", &filename);
+}
+
+static PyObject *
+FsCreateFile(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned char *filename = NULL;
+    char fname[17] = { [0 ... 16] = 0};
+    unsigned long filename_len = 0;
+    unsigned long file_size = 0;
+    unsigned long permissions = 0;
+    UT_RV   Result = 0;
+
+    if (!PyArg_ParseTuple(args, "ls#ll", &handle, &filename, &filename_len,
+        &file_size, &permissions))
+        return NULL;
+ 
+    memcpy(&fname, filename, 16);
+    if (handle > 0) { 
+        Result =  UT_FS_CreateFile(
+            (UT_HANDLE) handle, 
+            fname,
+            file_size, 
+            permissions 
+            );
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("l", Result);
+}
+
 static PyMethodDef PyUniTokenMethods[] = {
 {"InitToken",  InitToken, METH_VARARGS, "Init token"},
 {"GetLibraryVersion",  GetLibraryVersion, METH_VARARGS, "Return library version"},
@@ -473,6 +623,12 @@ static PyMethodDef PyUniTokenMethods[] = {
 {"RSAGetKeyPairCount", RSAGetKeyPairCount, METH_VARARGS, "Get RSA key count"},
 {"RSAPubKeyEncrypt", RSAPubKeyEncrypt, METH_VARARGS, "Encrypt data with public key"},
 {"RSAPriKeyDecrypt", RSAPriKeyDecrypt, METH_VARARGS, "Decrypt data with private key"},
+/* FS */
+{"FsGetSpace", FsGetSpace, METH_VARARGS, "Get usage of secure filesystem"},
+{"FsGetFileCount", FsGetFileCount, METH_VARARGS, "Get secure filesystem file count"},
+{"FsGetFirstFileName", FsGetFirstFileName, METH_VARARGS, "Get secure filesystem first file"},
+{"FsGetNextFileName", FsGetNextFileName, METH_VARARGS, "Get secure filesystem file next file"},
+{"FsCreateFile", FsCreateFile, METH_VARARGS, "Create file on secure filesystem"},
 {NULL, NULL,  0, NULL}        /* Sentinel */
 };
 
