@@ -8,6 +8,13 @@ class PyUniTokenTest(unittest.TestCase):
         self.handle = InitToken()
         self.assertIsNotNone(self.handle)
 
+    def test_exceptions(self):
+        with self.assertRaises(UniTokenNoFileError):
+            raise UniTokenNoFileError
+
+        with self.assertRaises(UniTokenError):
+            raise UniTokenError
+
     def test_version(self):
         self.assertEqual(GetLibraryVersion(), 770)
 
@@ -55,13 +62,23 @@ class PyUniTokenTest(unittest.TestCase):
 
     def test_filesystem(self):
         TokenLogin(self.handle, UT_USER_LEVEL_ADMIN, 'admin')
-        self.assertEqual((0, 65536), FsGetSpace(self.handle))
-        self.assertEqual(0, FsGetFileCount(self.handle))
-        with self.assertRaisesRegexp(IOError, 'No file.*'):
-            FsGetFirstFileName(self.handle)
-        with self.assertRaisesRegexp(IOError, 'No file.*'):
-            FsGetNextFileName(self.handle)
-        self.assertEqual(0, FsCreateFile(self.handle, 'test1.bin', 256, FILE_PERMISSION_ADMIN))
+#        self.assertEqual((0, 65536), FsGetSpace(self.handle))
+#        self.assertEqual(0, FsGetFileCount(self.handle))
+#        with self.assertRaises(UniTokenNoFileError):
+#            FsGetFirstFileName(self.handle)
+#        with self.assertRaises(UniTokenNoFileError):
+#            FsGetNextFileName(self.handle)
+#        self.assertEqual(0, FsCreateFile(self.handle, 'test1.bin', 64, FILE_PERMISSION_USER))
+#        self.assertEqual(0, FsOpenFile(self.handle, 'test1.bin'))
+        buf = "".join([chr(x) for x in xrange(32, 64+32)])
+        FsWriteFile(self.handle, buf)
+        self.assertEqual(0, FsDeleteFile(self.handle, 'test1.bin'))
+    def test_fs2(self):
+
+        TokenLogin(self.handle, UT_USER_LEVEL_ADMIN, 'admin')
+        print "-%lu-  -%s-" % (FsGetFileCount(self.handle),  FsGetFirstFileName(self.handle))
+        FsOpenFile(self.handle, '.Container')
+        print FsReadFile(self.handle)
 
     def tearDown(self):
         TokenLogout(self.handle)

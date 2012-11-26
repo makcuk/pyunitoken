@@ -6,6 +6,7 @@
 #define MAXBYTE          0xff
 
 static PyObject *PyUniTokenError;
+static PyObject *PyUniTokenNoFileError;
 
 char *
 err2msg(UT_RV errcode)
@@ -530,6 +531,11 @@ FsGetFirstFileName(PyObject *self, PyObject *args) {
             (UT_HANDLE) handle, 
             (char *)&filename
             );
+        if (Result == UT_FS_NO_FILE) {
+            PyErr_SetString(PyUniTokenNoFileError, err2msg(Result));
+            return NULL;
+        }
+        
         if (Result != UT_OK) {
              PyErr_SetString(PyExc_IOError, err2msg(Result));
              return NULL;
@@ -558,6 +564,10 @@ FsGetNextFileName(PyObject *self, PyObject *args) {
             (UT_HANDLE) handle, 
             (char *)&filename
             );
+        if (Result == UT_FS_LIST_END || Result == UT_FS_NO_FILE) {
+            PyErr_SetString(PyUniTokenNoFileError, err2msg(Result));
+            return NULL;
+        }
         if (Result != UT_OK) {
              PyErr_SetString(PyExc_IOError, err2msg(Result));
              return NULL;
@@ -606,6 +616,158 @@ FsCreateFile(PyObject *self, PyObject *args) {
     return Py_BuildValue("l", Result);
 }
 
+static PyObject *
+FsDeleteFile(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    char *filename = NULL;
+    unsigned long filename_len = 0;
+    UT_RV   Result = 0;
+
+    if (!PyArg_ParseTuple(args, "ls#", &handle, &filename, &filename_len))
+        return NULL;
+ 
+    if (handle > 0) { 
+        Result =  UT_FS_DeleteFile(
+            (UT_HANDLE) handle, 
+            filename
+            );
+        if (Result == UT_FS_NO_FILE) {
+            PyErr_SetString(PyUniTokenNoFileError, err2msg(Result));
+            return NULL;
+        }
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("l", Result);
+}
+
+static PyObject *
+FsWriteFile(PyObject *self, PyObject *args, PyObject *keywds) {
+    UT_HANDLE handle = 0;
+    unsigned char *write_buffer = NULL;
+    unsigned char wr_buf[200] = "hello medved";
+    unsigned long length = 0;
+    unsigned long offset = 0;
+    UT_RV   Result = 0;
+    static char *kwlist[] = {(char *)"offset"};
+    char fname[16] = "test1.bin";
+    void *reserve;
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "lz#|l", kwlist, &handle, &write_buffer,
+        &length, &offset))
+        return NULL;
+
+    printf("buffer: %s\t len: %lu\t offset: %lu\n", write_buffer, length, offset);
+    if (handle > 0) {
+        unsigned char filePermission = 0x0;
+        Result = UT_FS_CreateFile((UT_HANDLE) handle, fname, 200, filePermission);
+        Result = UT_FS_GetFilePermission(handle, fname, &filePermission);
+        unsigned long uFileSize = 0;
+        Result = UT_FS_GetFileSize(handle, fname, &uFileSize );
+        printf("%lu\t%lu\n", filePermission, uFileSize); 
+        Result = UT_FS_OpenFile((UT_HANDLE) handle, fname, NULL);
+        Result =  UT_FS_WriteFile(
+            (UT_HANDLE) handle, 
+            0,
+            200, 
+            (unsigned char *)&wr_buf,
+            reserve // lpReserve
+            );
+        printf("ret: %lu\n", Result);
+        UT_FS_CloseFile(handle, &reserve);
+        if (Result == UT_FS_NO_FILE) {
+            PyErr_SetString(PyUniTokenNoFileError, err2msg(Result));
+            return NULL;
+        }
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("l", Result);
+}
+
+static PyObject *
+FsReadFile(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned char read_buffer[200];// = NULL;
+    unsigned long length = 0;
+    unsigned long offset = 0;
+    UT_RV   Result = 0;
+    static char *kwlist[] = {(char *)"offset"};
+
+    if (!PyArg_ParseTuple(args, "l", &handle))
+        return NULL;
+ 
+    if (handle > 0) {
+        Result =  UT_FS_WriteFile(
+            (UT_HANDLE) handle, 
+            0,
+            100, 
+            (unsigned char *)&read_buffer,
+            NULL // lpReserve
+            );
+        if (Result == UT_FS_NO_FILE) {
+            PyErr_SetString(PyUniTokenNoFileError, err2msg(Result));
+            return NULL;
+        }
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("z#", read_buffer, length);
+}
+static PyObject *
+FsOpenFile(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    char *filename = NULL;
+    unsigned long filename_len = 0;
+    UT_RV   Result = 0;
+
+    if (!PyArg_ParseTuple(args, "ls#", &handle, &filename, &filename_len))
+        return NULL;
+ 
+    if (handle > 0) { 
+        Result =  UT_FS_OpenFile(
+            (UT_HANDLE) handle, 
+            filename,
+            NULL // lpReserved
+            );
+        if (Result == UT_FS_NO_FILE) {
+            PyErr_SetString(PyUniTokenNoFileError, err2msg(Result));
+            return NULL;
+        }
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("l", Result);
+}
+
 static PyMethodDef PyUniTokenMethods[] = {
 {"InitToken",  InitToken, METH_VARARGS, "Init token"},
 {"GetLibraryVersion",  GetLibraryVersion, METH_VARARGS, "Return library version"},
@@ -629,6 +791,10 @@ static PyMethodDef PyUniTokenMethods[] = {
 {"FsGetFirstFileName", FsGetFirstFileName, METH_VARARGS, "Get secure filesystem first file"},
 {"FsGetNextFileName", FsGetNextFileName, METH_VARARGS, "Get secure filesystem file next file"},
 {"FsCreateFile", FsCreateFile, METH_VARARGS, "Create file on secure filesystem"},
+{"FsOpenFile", FsOpenFile, METH_VARARGS, "Open file on secure filesystem"},
+{"FsDeleteFile", FsDeleteFile, METH_VARARGS, "Delete file on secure filesystem"},
+{"FsWriteFile", (PyCFunction) FsWriteFile, METH_VARARGS|METH_KEYWORDS, "Write file on secure filesystem"},
+{"FsReadFile", (PyCFunction) FsReadFile, METH_VARARGS|METH_KEYWORDS, "Read file on secure filesystem"},
 {NULL, NULL,  0, NULL}        /* Sentinel */
 };
 
@@ -642,9 +808,15 @@ initpyunitoken(void)
     m = Py_InitModule("pyunitoken", PyUniTokenMethods);
     if (m == NULL) 
         return;
-    PyUniTokenError = PyErr_NewException((char *)"unitoken.UniTokenError", NULL, NULL);
+    PyUniTokenError = PyErr_NewException((char *)"pyunitoken.UniTokenError", NULL, NULL);
+    PyUniTokenNoFileError = PyErr_NewException((char *)"pyunitoken.UniTokenNoFileError", NULL, NULL);
+
     Py_INCREF(PyUniTokenError);
+    Py_INCREF(PyUniTokenNoFileError);
+    
+    PyModule_AddObject(m, "UniTokenNoFileError", PyUniTokenNoFileError);
     PyModule_AddObject(m, "UniTokenError", PyUniTokenError);
+
     while (constants[i].name != NULL) {
         v = PyLong_FromLong(constants[i].value); 
         PyObject_SetAttrString(m, constants[i].name, v);
