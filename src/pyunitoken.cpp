@@ -311,6 +311,62 @@ SetSoftId(PyObject *self, PyObject *args) {
 }
 
 static PyObject *
+GetId(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    char id[MAXBYTE] = {[0 ... MAXBYTE-1] = 0 };
+    UT_RV   Result = 0;
+
+
+    if (!PyArg_ParseTuple(args, "l", &handle))
+        return NULL;
+
+    if (handle > 0) { 
+        Result =  UT_GetID((UT_HANDLE) handle, id);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+        }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("s", id);
+}
+
+static PyObject *
+SetId(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned char *in_id = NULL;
+    unsigned long in_id_len = 0;
+    char id[MAXBYTE] = {[0 ... MAXBYTE-1] = 0 };
+    UT_RV   Result = 0;
+
+
+    if (!PyArg_ParseTuple(args, "ls#", &handle, &in_id, &in_id_len))
+        return NULL;
+
+    if (in_id_len > MAXBYTE) 
+        in_id_len = MAXBYTE;
+    
+    memcpy(&id, in_id, in_id_len);
+
+    if (handle > 0) { 
+        Result =  UT_SetID((UT_HANDLE) handle, id);
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+        }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+static PyObject *
 RSAGenKeyPair(PyObject *self, PyObject *args) {
     UT_HANDLE handle = 0;
     unsigned long modulus = 0;
@@ -656,7 +712,7 @@ FsWriteFile(PyObject *self, PyObject *args, PyObject *keywds) {
     unsigned long offset = 0;
     UT_RV   Result = 0;
     static char *kwlist[] = {(char *)"offset"};
-    void *reserve;
+    void *reserve = NULL;
 
     if (!PyArg_ParseTupleAndKeywords(args, keywds, "lz#|l", kwlist, &handle, &write_buffer,
         &length, &offset))
@@ -760,6 +816,43 @@ FsOpenFile(PyObject *self, PyObject *args) {
     return Py_BuildValue("l", Result);
 }
 
+static PyObject *
+FsGetFileSize(PyObject *self, PyObject *args) {
+    UT_HANDLE handle = 0;
+    unsigned char *filename = NULL;
+    unsigned long filename_len = 0;
+    unsigned long file_len = 0;
+    char fname[17] = { [0 ... 16] = 0};
+
+    UT_RV   Result = 0;
+
+    if (!PyArg_ParseTuple(args, "ls#", &handle, &filename, &filename_len))
+        return NULL;
+    
+    memcpy(&fname, filename, 16);
+ 
+    if (handle > 0) { 
+        Result =  UT_FS_GetFileSize(
+            (UT_HANDLE) handle, 
+            fname,
+            &file_len 
+            );
+        if (Result == UT_FS_NO_FILE) {
+            PyErr_SetString(PyUniTokenNoFileError, err2msg(Result));
+            return NULL;
+        }
+        if (Result != UT_OK) {
+             PyErr_SetString(PyExc_IOError, err2msg(Result));
+             return NULL;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_IOError, (char *) "Handle empty");
+        return NULL;
+    };
+
+    return Py_BuildValue("l", file_len);
+}
 static PyMethodDef PyUniTokenMethods[] = {
 {"InitToken",  InitToken, METH_VARARGS, "Init token"},
 {"GetLibraryVersion",  GetLibraryVersion, METH_VARARGS, "Return library version"},
@@ -771,6 +864,8 @@ static PyMethodDef PyUniTokenMethods[] = {
 {"ChangePin", ChangePin, METH_VARARGS, "Change pin for selected user"},
 {"GetSoftId", GetSoftId, METH_VARARGS, "Get token software id"},
 {"SetSoftId", SetSoftId, METH_VARARGS, "Set token software id"},
+{"GetId", GetId, METH_VARARGS, "Get token id"},
+{"SetId", SetId, METH_VARARGS, "Set token id"},
 {"FormatToken", FormatToken, METH_VARARGS, "Format token and clear all it content"},
 /* RSA */
 {"RSAGenKeyPair", RSAGenKeyPair, METH_VARARGS, "Generate new RSA keypair on token"},
@@ -787,6 +882,7 @@ static PyMethodDef PyUniTokenMethods[] = {
 {"FsDeleteFile", FsDeleteFile, METH_VARARGS, "Delete file on secure filesystem"},
 {"FsWriteFile", (PyCFunction) FsWriteFile, METH_VARARGS|METH_KEYWORDS, "Write file on secure filesystem"},
 {"FsReadFile", (PyCFunction) FsReadFile, METH_VARARGS|METH_KEYWORDS, "Read file on secure filesystem"},
+{"FsGetFileSize", FsGetFileSize, METH_VARARGS, "Get file size on secure filesystem"},
 {NULL, NULL,  0, NULL}        /* Sentinel */
 };
 

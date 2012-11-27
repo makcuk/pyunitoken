@@ -33,6 +33,12 @@ class PyUniTokenTest(unittest2.TestCase):
         ChangePin(self.handle, UT_USER_LEVEL_ADMIN, 'admin', 'testpin')
         ChangePin(self.handle, UT_USER_LEVEL_ADMIN, 'testpin', 'admin')
 
+    def test_id(self):
+        TokenLogin(self.handle, UT_USER_LEVEL_ADMIN, 'admin')
+        t_id = "the real McCoy"
+        self.assertIsNone(SetId(self.handle, t_id))
+        self.assertEqual(t_id, GetId(self.handle))
+
     def test_softid(self):
         TokenLogin(self.handle, UT_USER_LEVEL_ADMIN, 'admin')
         softid = random.randint(1, 100500)
@@ -72,7 +78,7 @@ class PyUniTokenTest(unittest2.TestCase):
         buf = "".join([chr(x) for x in xrange(32, 64+32)])
         FsWriteFile(self.handle, buf)
         self.assertEqual(0, FsOpenFile(self.handle, 'test1.bin'))
-        self.assertEqual(buf, FsReadFile(self.handle, 64))
+        self.assertEqual(buf, FsReadFile(self.handle, FsGetFileSize('test1.bin')))
         self.assertEqual(0, FsDeleteFile(self.handle, 'test1.bin'))
 
     def tearDown(self):
