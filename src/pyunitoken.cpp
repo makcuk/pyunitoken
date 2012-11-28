@@ -1,3 +1,9 @@
+/*
+ * This code is licensed under Creative Commons CC-BY-NC 3.0
+ * http://creativecommons.org/licenses/by-nc/3.0/
+ * (c) 2012 Max Speransky <speransky@gmail.com> 
+ */
+
 #include <Python.h>
 #include <string.h>
 #include <UniToken.h>
