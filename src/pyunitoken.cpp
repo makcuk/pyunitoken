@@ -36,7 +36,7 @@ InitToken(PyObject *self, PyObject *args) {
             PyErr_SetString(PyExc_RuntimeError, err2msg(Result));
             return NULL;
         }
-            printf("Warning: token already initialized\n");
+//            printf("Warning: token already initialized\n");
         }
         Result = ~UT_OK;
     Result = UT_GetTokenList(lpSlotID, &TokenCount);

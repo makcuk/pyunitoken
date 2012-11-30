@@ -78,10 +78,9 @@ class LoginDialog(wx.Dialog):
 class TaskBarFrame(wx.Frame):
     def __init__(self, parent):
         wx.Frame.__init__(self, parent, style=wx.FRAME_NO_TASKBAR | wx.NO_FULL_REPAINT_ON_RESIZE)
-        self.icon_state = False
-        self.blink_state = False
         self.logged = False
         self.handle = 0
+        self.tries = 0
 
         self.tbicon = wx.TaskBarIcon()
         self.tbicon.SetIcon(token_images.lock_icon.GetIcon(), '')
@@ -90,6 +89,7 @@ class TaskBarFrame(wx.Frame):
         self.SetIconTimer()
 
     def Login(self):
+
         ret = False
         dlg = LoginDialog(self, -1, "Token login", size=(350, 200), style=wx.DEFAULT_DIALOG_STYLE,)
         dlg.CenterOnScreen()
@@ -99,12 +99,15 @@ class TaskBarFrame(wx.Frame):
             try:
                 self.handle = UT.InitToken()
             except:
-                pass
+                wx.MessageBox("Token init failed")
             try:
                 UT.TokenLogin(self.handle, UT.UT_USER_LEVEL_USER, pin)
                 ret = True
             except IOError as e:
-                print repr(e)
+                print e.args
+                if 'Password error' in e.args:
+                    wx.MessageBox("Incorrect pin")
+                    self.tries += 1
                 ret = False
             return ret
 
